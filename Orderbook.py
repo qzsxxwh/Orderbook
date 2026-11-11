@@ -7,60 +7,108 @@ class OrderBook:
         self.orders = {}    # order_id -> [side, price, remaining_qty]
         self.seq = 0
 
+    def _opposite_book(self, side):
+        return self.asks if side == "B" else self.bids
+
+    def _best_price(self, side):
+        book = self._opposite_book(side)
+
+        if not book:
+            return None
+
+        return book[0][0] if side == "B" else -book[0][0]
+
+    def _crosses(self, side, limit_price):
+        best = self._best_price(side)
+
+        if best is None:
+            return False
+
+        return best <= limit_price if side == "B" else best >= limit_price
+
+    def _add_to_book(self, order_id, side, price, qty):
+        self.orders[order_id] = [side, price, qty]
+
+        if side == "B":
+            heappush(self.bids, (-price, self.seq, order_id))
+        else:
+            heappush(self.asks, (price, self.seq, order_id))
+
+        self.seq += 1
+
+    def _make_fill(self, incoming_id, resting_id, side, price, qty):
+        if side == "B":
+            return (incoming_id, resting_id, price, qty)
+
+        return (resting_id, incoming_id, price, qty)
+
     def add_limit(self, order_id, side, price, qty):
+
         fills = []
-        #case for each side
-        match side:
-            case "B":
-                #init. remaining wanted qty
-                remaining_qty = qty
-                #as long as best ask is affordable
-                while remaining_qty > 0 and len(self.asks) > 0 and self.best_ask() <= price:
-                    bought_qty = 0
-                    #init best ask seller id and best ask remaining qty
-                    seller_id = self.asks[0][2]
-                    seller_price = self.orders[seller_id][1]
-                    s_remaining_qty = self.orders[seller_id][2]
-                    #if seller has less than or as much as buyer needs
-                    if s_remaining_qty < remaining_qty:
-                        #update buyer remaining wanted qty
-                        bought_qty = s_remaining_qty
-                        remaining_qty -= s_remaining_qty
-                        #all seller's qty depleted -> remove seller from the book
-                        self.orders.pop(seller_id)
-                        heappop(self.asks)
-                    #seller has more than buyer needs
-                    elif s_remaining_qty > remaining_qty:
-                        #update bought qty
-                        bought_qty = remaining_qty
-                        #remove what buyer bought from seller's qty
-                        s_remaining_qty -= remaining_qty
-                        remaining_qty = 0
-                    #seller has just as much as buyer needs
-                    elif s_remaining_qty == remaining_qty:
-                        bought_qty = remaining_qty
-                        #both the seller and buyer's qtys are depleted -> remove seller from the book
-                        s_remaining_qty, remaining_qty = 0, 0
-                        self.orders.pop(seller_id)
-                        heappop(self.asks)
-                    self.orders[seller_id][2] = s_remaining_qty
-                    fills.append((order_id, seller_id, seller_price, bought_qty))
-                #buyer still has unbought qty
-                if remaining_qty > 0:
-                    #add buyer to book
-                    heappush(self.bids, (-price, self.seq, order_id))
-                    self.orders[order_id] = [side, price, remaining_qty]
-            case "S":
-                #init. remaining qty
-                remaining_seller_qty = qty
-                #as long as best offer is enough
-                while remaining_seller_qty > 0 and len(self.bids) > 0 and self.best_bid() >= price:
-                    pass
+        remaining = qty
+
+        book = self._opposite_book(side)
+
+        while remaining > 0 and self._crosses(side, price):
+
+            resting_id = book[0][2]
+
+            resting_price = self.orders[resting_id][1]
+            resting_qty = self.orders[resting_id][2]
+
+            traded_qty = min(remaining, resting_qty)
+
+            remaining -= traded_qty
+            resting_qty -= traded_qty
+
+            fills.append(
+                self._make_fill(
+                    order_id,
+                    resting_id,
+                    side,
+                    resting_price,
+                    traded_qty,
+                )
+            )
+
+            if resting_qty == 0:
+                self.orders.pop(resting_id)
+                heappop(book)
+            else:
+                self.orders[resting_id][2] = resting_qty
+
+        if remaining > 0:
+            self._add_to_book(
+                order_id,
+                side,
+                price,
+                remaining,
+            )
+
         return fills
         # returns list of fills
 
     def cancel(self, order_id):
-        ...  # returns True/False
+        if order_id in self.orders:
+            match self.orders[order_id][0]:
+                case"B":
+                    for index, bid in enumerate(self.bids):
+                        if bid[2] == order_id:
+                            self.bids[index] = self.bids[-1]
+                            self.bids.pop()
+                            heapify(self.bids)
+                            break
+                case"S":
+                    for index, ask in enumerate(self.asks):
+                        if ask[2] == order_id:
+                            self.asks[index] = self.asks[-1]
+                            self.asks.pop()
+                            heapify(self.asks)
+                            break
+            self.orders.pop(order_id)
+            return True
+        else:
+            return False
 
     def best_bid(self):
         return - self.bids[0][0]
@@ -68,8 +116,3 @@ class OrderBook:
     def best_ask(self):
         return self.asks[0][0]
     
-
-ob = OrderBook()
-ob.add_limit(1, "S", 102, 2)
-ob.add_limit(2, "S", 101, 14)
-ob.add_limit(3, "B", 102, 18)
