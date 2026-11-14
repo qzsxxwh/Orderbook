@@ -67,7 +67,7 @@ class OrderBook:
                     resting_id,
                     side,
                     resting_price,
-                    traded_qty,
+                    traded_qty
                 )
             )
 
@@ -82,7 +82,7 @@ class OrderBook:
                 order_id,
                 side,
                 price,
-                remaining,
+                remaining
             )
 
         return fills
@@ -91,14 +91,14 @@ class OrderBook:
     def cancel(self, order_id):
         if order_id in self.orders:
             match self.orders[order_id][0]:
-                case"B":
+                case "B":
                     for index, bid in enumerate(self.bids):
                         if bid[2] == order_id:
                             self.bids[index] = self.bids[-1]
                             self.bids.pop()
                             heapify(self.bids)
                             break
-                case"S":
+                case "S":
                     for index, ask in enumerate(self.asks):
                         if ask[2] == order_id:
                             self.asks[index] = self.asks[-1]
