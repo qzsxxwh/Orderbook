@@ -50,6 +50,9 @@ class OrderBook:
         book = self._opposite_book(side)
 
         while remaining > 0 and self._crosses(side, price):
+            self._prune(book)
+            if not self._crosses(side, price):
+                break
 
             resting_id = book[0][2]
 
@@ -87,28 +90,13 @@ class OrderBook:
 
         return fills
         # returns list of fills
+    
+    def _prune(self, book):
+        while book and book[0][2] not in self.orders:
+            heappop(book)
 
     def cancel(self, order_id):
-        if order_id in self.orders:
-            match self.orders[order_id][0]:
-                case "B":
-                    for index, bid in enumerate(self.bids):
-                        if bid[2] == order_id:
-                            self.bids[index] = self.bids[-1]
-                            self.bids.pop()
-                            heapify(self.bids)
-                            break
-                case "S":
-                    for index, ask in enumerate(self.asks):
-                        if ask[2] == order_id:
-                            self.asks[index] = self.asks[-1]
-                            self.asks.pop()
-                            heapify(self.asks)
-                            break
-            self.orders.pop(order_id)
-            return True
-        else:
-            return False
+        return self.orders.pop(order_id, None) is not None
 
     def best_bid(self):
         return - self.bids[0][0]

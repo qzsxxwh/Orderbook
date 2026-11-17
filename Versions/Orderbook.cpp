@@ -8,18 +8,14 @@ using namespace std;
 
 class Orderbook {
     public:
+    struct OrderInfo { char side; int price; int qty; };
+
     vector<vector<int>>  bids;    // heap of (price, seq, order_id)
     vector<vector<int>> asks;     // heap of (-price, seq, order_id)
-    struct OrderInfo {
-        char side;
-        int price;
-        int qty;
-    }; 
     map<int, OrderInfo> orders;//order_id -> [side, price, remaining_qty]
     int seq = 0;
 
     vector<vector<int>>& opposite_book(char side) {
-
         return (side == 'B') ? asks : bids;
     }
 
@@ -75,7 +71,9 @@ class Orderbook {
         vector<vector<int>>& book = opposite_book(side);
 
         while (remaining > 0 && crosses(side, price)) {
-
+            prune(book);
+            if (!crosses(side, price))
+                break;
             int resting_id = book[0][2];
 
             int resting_price = orders[resting_id].price;
@@ -114,59 +112,30 @@ class Orderbook {
                 remaining
             );
         }
-
         return fills;
 
     }
 
+    void prune(vector<vector<int>>& book) {
+        while (!book.empty() &&
+            orders.count(book[0][2]) == 0) {
+
+            pop_heap(book.begin(), book.end());
+            book.pop_back();
+    }
+}
+    
     bool cancel(int order_id) {
-    if (orders.count(order_id) == 0) {
-        return false;
-    }
-
-    switch (orders[order_id].side) {
-
-        case 'B':
-            for (size_t i = 0; i < bids.size(); ++i) {
-                if (bids[i][2] == order_id) {
-                    bids[i] = bids.back();
-                    bids.pop_back();
-
-                    make_heap(bids.begin(), bids.end());
-                    break;
-                }
-            }
-            break;
-
-        case 'S':
-            for (size_t i = 0; i < asks.size(); ++i) {
-                if (asks[i][2] == order_id) {
-                    asks[i] = asks.back();
-                    asks.pop_back();
-
-                    make_heap(asks.begin(), asks.end());
-                    break;
-                }
-            }
-            break;
-    }
-
-    orders.erase(order_id);
-
-    return true;
+        return orders.erase(order_id) > 0;
 }
 
     int best_bid() {
-        if (bids.empty()) {
-            throw out_of_range("empty bid book");
-        }
+        if (bids.empty()) throw out_of_range("empty bid book");
         return bids[0][0];
     }
 
     int best_ask() {
-        if (asks.empty()) {
-            throw out_of_range("empty ask book");
-        }
+        if (asks.empty()) throw out_of_range("empty ask book");
         return - asks[0][0];
     }
 };
