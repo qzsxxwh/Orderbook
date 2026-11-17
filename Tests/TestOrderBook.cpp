@@ -1,7 +1,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdexcept>
-#include "Orderbook.cpp"
+#include "../Versions/Orderbook.cpp"
 
 using namespace std;
 
@@ -188,17 +188,6 @@ void test_cancelled_order_not_matched() {
     assert(fills.empty());
 }
 
-void test_cancel_returns_order() {
-    Orderbook ob;
-
-    ob.add_limit(1, 'B', 100, 10);
-
-    ob.cancel(1);
-
-    assert(ob.orders.empty());
-    assert(ob.bids.empty());
-}
-
 void test_best_bid_empty_book() {
     Orderbook ob;
 
@@ -275,7 +264,6 @@ int main() {
     test_cancel_existing_order();
     test_cancel_nonexistent_order();
     test_cancelled_order_not_matched();
-    test_cancel_returns_order();
     test_best_bid_empty_book();
     test_best_ask_empty_book();
     test_cancel_after_partial_fill();

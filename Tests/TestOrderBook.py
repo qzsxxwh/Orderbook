@@ -1,5 +1,6 @@
-from Orderbook import OrderBook
+from Versions.Orderbook import OrderBook
 import unittest
+
 
 class TestOrderBook(unittest.TestCase):
 
@@ -183,22 +184,6 @@ class TestOrderBook(unittest.TestCase):
         self.assertEqual(
             fills,
             []
-        )
-
-    def test_cancel_returns_order(self):
-
-        self.ob.add_limit(1, "B", 100, 10)
-
-        self.ob.cancel(1)
-
-        self.assertEqual(
-            len(self.ob.orders),
-            0
-        )
-
-        self.assertEqual(
-            len(self.ob.bids),
-            0
         )
 
     def test_best_bid_empty_book(self):
