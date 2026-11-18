@@ -55,6 +55,16 @@ The study compares heap-based and price-level order books under identical worklo
 - Cancellation rate had relatively little impact on performance, suggesting that lazy-cancellation overhead was not a dominant cost under the tested workloads.
 
 ---
+## Results at a Glance
+
+| Comparison | Result |
+|------------|--------|
+| `cpp_orig` → `cpp_fixed` | ~2.2× faster (41 ms → 19 ms at 200k ops) |
+| `py_heap` → `cpp_orig` | ~3.2× faster (132 ms → 41 ms at 200k ops) |
+| `py_heap` → `cpp_pricelevel` | ~11× faster (132 ms → 12 ms at 200k ops) |
+| Fastest implementation | `cpp_pricelevel` |
+| Largest improvement | Optimizing the C++ heap implementation (`cpp_orig` → `cpp_fixed`) |
+---
 
 ## Interpretation of results
 
